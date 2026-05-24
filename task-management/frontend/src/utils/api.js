@@ -1,9 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL:
-    process.env.REACT_APP_API_URL ||
-    "https://taskflow-backend-c7bf.onrender.com/api",
+  baseURL: "https://taskflow-backend-c7bf.onrender.com/api",
 
   headers: {
     "Content-Type": "application/json",
