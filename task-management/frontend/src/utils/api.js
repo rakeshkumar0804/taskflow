@@ -1,7 +1,10 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL,
+  baseURL:
+    process.env.REACT_APP_API_URL ||
+    "https://taskflow-backend-c7bf.onrender.com/api",
+
   headers: {
     "Content-Type": "application/json",
   },
@@ -21,6 +24,7 @@ api.interceptors.request.use((config) => {
 // Handle 401 globally
 api.interceptors.response.use(
   (response) => response,
+
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("token");
