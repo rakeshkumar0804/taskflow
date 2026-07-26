@@ -19,6 +19,18 @@ TaskFlow is a full-stack task management application built with the MERN stack. 
 - **Project Organization** — Group tasks under projects for better structure
 - **Responsive UI** — Clean, modern dark-mode interface
 
+## 📸 Screenshots
+
+### Login Page<img width="1911" height="962" alt="login" src="https://github.com/user-attachments/assets/0d0c1dbb-257c-4926-97f8-09a575567473" />
+
+
+### Dashboard<img width="1902" height="962" alt="dashboard " src="https://github.com/user-attachments/assets/0df14ad4-e767-43fe-9bfa-8273e9e33a74" />
+
+
+### PROJECTS<img width="1902" height="946" alt="projects" src="https://github.com/user-attachments/assets/ba39b08b-e2e4-498c-953b-2a111beedbe7" />
+
+
+
 ## Tech Stack
 
 **Frontend:**
