@@ -38,6 +38,12 @@ const projectSchema = new mongoose.Schema(
       default: 'active',
     },
     dueDate: { type: Date, default: null },
+    aggregateVersion: {
+      type: Number,
+      default: 0,
+      min: 0,
+      select: false,
+    },
   },
   { timestamps: true }
 );

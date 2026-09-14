@@ -148,7 +148,40 @@
   color: var(--text-3);
 }
 
-/* Priority bars */
+.task-due-overdue {
+  color: #ef4444 !important;
+  font-weight: 600;
+}
+
+.task-project-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+.task-row:hover {
+  background: var(--bg-2);
+}
+
+.dashboard-link {
+  font-size: 12px;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.2s ease;
+}
+
+.dashboard-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
 .priority-bars {
   display: flex;
   flex-direction: column;
@@ -188,6 +221,122 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--text-2);
-  width: 24px;
+  min-width: 60px;
   text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.priority-bar-pct {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* Command Center Layout */
+.command-center-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.command-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.command-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.command-card-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--bg-3);
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+/* Risk tags */
+.risk-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.risk-tag-overdue {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.risk-tag-soon {
+  background: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.risk-tag-stalled {
+  background: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.risk-tag-unstarted {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.task-due-today {
+  color: #f97316 !important;
+  font-weight: 600;
+}
+
+.priority-section {
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 960px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .command-center-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard {
+    padding: 20px 16px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .task-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .task-row-right {
+    width: 100%;
+    justify-content: space-between;
+  }
 }

@@ -1,5 +1,11 @@
 require("dotenv").config();
 
+// Ensure production fails closed if JWT_SECRET is missing
+if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+  console.error("FATAL: JWT_SECRET environment variable is required in production");
+  process.exit(1);
+}
+
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -13,11 +19,14 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
-// Allowed Frontend URLs
-const allowedOrigins = [
+// Allowed Frontend URLs (strictly controlled trusted origins)
+const defaultOrigins = [
   "http://localhost:3000",
   "https://taskflow-gules-rho.vercel.app",
 ];
+const allowedOrigins = process.env.CLIENT_URL
+  ? [...new Set([...defaultOrigins, process.env.CLIENT_URL])]
+  : defaultOrigins;
 
 // Socket.io
 const io = new Server(server, {
@@ -32,6 +41,8 @@ const io = new Server(server, {
 app.use(
   cors({
     origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   }),
 );
@@ -48,7 +59,12 @@ app.use((req, _res, next) => {
 // Routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/tasks", require("./routes/tasks"));
+app.use("/api/projects", require("./routes/capacity"));
 app.use("/api/projects", require("./routes/projects"));
+app.use("/api/releases", require("./routes/releases"));
+app.use("/api/milestones", require("./routes/milestones"));
+app.use("/api/decisions", require("./routes/decisions"));
+app.use("/api/activity", require("./routes/activity"));
 app.use("/api/users", require("./routes/users"));
 
 // Health Check

@@ -66,9 +66,52 @@ const taskSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    isBlocked: {
+      type: Boolean,
+      default: false,
+    },
+    blockedReason: {
+      type: String,
+      trim: true,
+      maxlength: [300, "Blocked reason cannot exceed 300 characters"],
+      default: "",
+    },
+    milestone: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Milestone",
+      default: null,
+    },
+    dependsOn: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Task",
+        },
+      ],
+      default: [],
+    },
+    estimateDays: {
+      type: Number,
+      min: 1,
+      max: 60,
+      default: null,
+    },
+    blockerEta: {
+      type: Date,
+      default: null,
+    },
+    aggregateVersion: {
+      type: Number,
+      default: 0,
+      min: 0,
+      select: false,
+    },
   },
   { timestamps: true },
 );
+
+taskSchema.index({ milestone: 1 });
+taskSchema.index({ dependsOn: 1 });
 
 // Auto-set completedAt when status becomes 'Done'
 taskSchema.pre("save", function (next) {

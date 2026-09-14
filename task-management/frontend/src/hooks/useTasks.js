@@ -48,22 +48,34 @@ export const useTasks = (filters = {}) => {
 
   const createTask = async (taskData) => {
     const { data } = await api.post('/tasks', taskData);
+    if (data.task) {
+      setTasks((prev) => [data.task, ...prev]);
+    }
     return data.task;
   };
 
   const updateTask = async (id, taskData) => {
     const { data } = await api.put(`/tasks/${id}`, taskData);
+    if (data.task) {
+      setTasks((prev) => prev.map((t) => (t._id === id ? data.task : t)));
+    }
     return data.task;
   };
 
   const deleteTask = async (id) => {
     await api.delete(`/tasks/${id}`);
+    setTasks((prev) => prev.filter((t) => t._id !== id));
   };
 
   const addComment = async (id, text) => {
     const { data } = await api.post(`/tasks/${id}/comments`, { text });
+    if (data.comments) {
+      setTasks((prev) =>
+        prev.map((t) => (t._id === id ? { ...t, comments: data.comments } : t))
+      );
+    }
     return data.comments;
   };
 
-  return { tasks, loading, fetchTasks, createTask, updateTask, deleteTask, addComment };
+  return { tasks, setTasks, loading, fetchTasks, createTask, updateTask, deleteTask, addComment };
 };

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import './Auth.css';
@@ -8,24 +8,41 @@ export default function AuthPage() {
   const [mode, setMode] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const { login, register } = useAuth();
+  const { user, login, register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (user) {
+      const from = location.state?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
+    }
+  }, [user, navigate, location]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     try {
       if (mode === 'login') {
         await login(form.email, form.password);
       } else {
-        if (!form.name.trim()) return toast.error('Name is required');
+        if (!form.name.trim()) {
+          setLoading(false);
+          return toast.error('Name is required');
+        }
         await register(form.name, form.email, form.password);
       }
-      navigate('/dashboard');
+      const from = location.state?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Something went wrong');
+      if (!err.response || err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+        toast.error('Unable to reach the TaskFlow server. Check that the backend is running and try again.');
+      } else {
+        toast.error(err.response?.data?.message || 'Authentication request failed');
+      }
     } finally {
       setLoading(false);
     }
@@ -100,7 +117,7 @@ export default function AuthPage() {
 
         <p className="auth-switch">
           {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}
-          <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
+          <button type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
             {mode === 'login' ? ' Sign up' : ' Sign in'}
           </button>
         </p>
