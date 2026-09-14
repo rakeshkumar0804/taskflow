@@ -2,6 +2,10 @@
 
 A full-stack MERN real-time task management app with RBAC, Kanban board, and Socket.IO.
 
+> Engineering delivery intelligence: **see what ships, what slips, and why.**
+
+The active implementation is in `backend/` and `frontend/`. It includes dependency graphs, release forecasting, ADRs, capacity intelligence, a versioned activity ledger, and GitHub pull-request evidence. The Phase 9 release QA checklist and architecture reference are in [`docs/`](docs/).
+
 ## Features
 
 - **JWT Authentication** — Register/Login with role-based access (Admin, Manager, Member)
@@ -23,13 +27,13 @@ A full-stack MERN real-time task management app with RBAC, Kanban board, and Soc
 ### 1. Clone & install
 
 ```bash
-# Server
-cd server
+# Backend
+cd backend
 npm install
 cp .env.example .env    # Edit MONGO_URI and JWT_SECRET
 
-# Client
-cd ../client
+# Frontend
+cd ../frontend
 npm install
 ```
 
@@ -46,10 +50,10 @@ CLIENT_URL=http://localhost:3000
 
 ```bash
 # Terminal 1 — Backend
-cd server && npm run dev
+cd backend && npm run dev
 
 # Terminal 2 — Frontend
-cd client && npm start
+cd frontend && npm start
 ```
 
 App runs at **http://localhost:3000**
