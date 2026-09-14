@@ -9,6 +9,7 @@ import { useTasks } from "../hooks/useTasks";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import TaskDrawer from "../components/tasks/TaskDrawer";
+import GitHubEvidenceBadge from "../components/tasks/GitHubEvidenceBadge";
 import {
   COLUMNS,
   getDueDateInfo,
@@ -355,6 +356,7 @@ export default function TasksPage() {
                                   )}
 
                                   <h3>{task.title}</h3>
+                                  <GitHubEvidenceBadge task={task} />
 
                                   {task.description && (
                                     <p>{task.description}</p>
@@ -502,6 +504,7 @@ export default function TasksPage() {
                     )}
 
                     <span className="tlr-title">{task.title}</span>
+                    <GitHubEvidenceBadge task={task} />
                   </div>
 
                   <div className="tlr-right">

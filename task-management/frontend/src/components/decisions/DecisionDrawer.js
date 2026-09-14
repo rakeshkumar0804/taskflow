@@ -185,7 +185,7 @@ export default function DecisionDrawer({
                   <>
                     <span>•</span>
                     <span>Decided by: <strong>{decision.decidedBy?.name}</strong></span>
-                    <span>({new Date(decision.decidedAt).toLocaleDateString()})</span>
+                    <span>({decision.decidedAt && !Number.isNaN(new Date(decision.decidedAt).getTime()) ? new Date(decision.decidedAt).toLocaleDateString() : 'Date unavailable'})</span>
                   </>
                 )}
               </div>
@@ -569,7 +569,7 @@ export default function DecisionDrawer({
                           </div>
                           <div className="audit-row">
                             <span className="audit-label">Decided At:</span>
-                            <span className="audit-val">{new Date(decision.decidedAt).toLocaleString()}</span>
+                            <span className="audit-val">{decision.decidedAt && !Number.isNaN(new Date(decision.decidedAt).getTime()) ? new Date(decision.decidedAt).toLocaleString() : 'Date unavailable'}</span>
                           </div>
                         </>
                       )}

@@ -22,7 +22,7 @@ export const getDueDateInfo = (dueDate, status) => {
   const formatted = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
   if (status !== 'Done' && d < startOfToday) {
-    return { label: Overdue (), isOverdue: true, isToday: false };
+    return { label: 'Overdue', isOverdue: true, isToday: false };
   }
   if (status !== 'Done' && d >= startOfToday && d <= endOfToday) {
     return { label: 'Due today', isOverdue: false, isToday: true };

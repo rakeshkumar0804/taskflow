@@ -36,8 +36,27 @@ function getCommandKey({ actor, operation, subjectId, idempotencyKey }) {
 
 function computeRequestFingerprint(payload) {
   if (!payload) return null;
-  const str = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  const stable = (value) => {
+    if (Array.isArray(value)) return value.map(stable);
+    if (value && typeof value === 'object') {
+      return Object.keys(value).sort().reduce((out, key) => {
+        out[key] = stable(value[key]);
+        return out;
+      }, {});
+    }
+    return value;
+  };
+  const str = typeof payload === 'string' ? payload : JSON.stringify(stable(payload));
   return crypto.createHash('sha256').update(str).digest('hex');
+}
+
+function pruneCommandJournal(maxAgeMs = 24 * 60 * 60 * 1000) {
+  const cutoff = Date.now() - maxAgeMs;
+  for (const [key, entry] of commandJournal) {
+    if (entry.createdAt && entry.createdAt.getTime() < cutoff && entry.status !== 'in_progress') {
+      commandJournal.delete(key);
+    }
+  }
 }
 
 /**
@@ -55,6 +74,7 @@ async function executeIdempotentCommand({
   eventInput: initialEventInput,
   options = {},
 }) {
+  pruneCommandJournal();
   if (!idempotencyKey) {
     return recordExecutionEvent({
       model,
@@ -276,13 +296,14 @@ async function recordExecutionEvent({
   const correlationId = eventInput.correlationId || crypto.randomUUID();
 
   // If environment supports transactions or a session is explicitly provided in options
-  const canUseTxn = options.session || options.forceTransaction || supportsTransactions();
+  const ambientSession = mongoose.transactionAsyncLocalStorage?.getStore()?.session;
+  const canUseTxn = options.session || ambientSession || options.forceTransaction || supportsTransactions();
 
   // =========================================================================
   // 1. REPLICA-SET TRANSACTIONAL BRANCH
   // =========================================================================
   if (canUseTxn && !options.forceStandalone) {
-    let session = options.session;
+    let session = options.session || ambientSession;
     let ownsSession = false;
 
     if (!session) {
@@ -342,7 +363,10 @@ async function recordExecutionEvent({
       const nextVersion = currentVer + 1;
       aggregate.aggregateVersion = nextVersion;
 
-      if (typeof aggregate.save === 'function') {
+      if (options.skipAggregateSave) {
+        // Tombstone event: the aggregate was intentionally removed in the
+        // surrounding transaction and must not be reinserted by save().
+      } else if (typeof aggregate.save === 'function') {
         await aggregate.save({ session: activeSession });
       } else if (model && aggregate._id) {
         await model.findByIdAndUpdate(
@@ -454,7 +478,10 @@ async function recordExecutionEvent({
   const nextVersion = currentVer + 1;
   aggregate.aggregateVersion = nextVersion;
 
-  if (typeof aggregate.save === 'function') {
+  if (options.skipAggregateSave) {
+    // Tombstone event in standalone fallback. The deleted document supplies
+    // its last version, but must never be resurrected merely to advance it.
+  } else if (typeof aggregate.save === 'function') {
     if (mongoose.connection.readyState === 1 || aggregate.save !== mongoose.Model.prototype.save) {
       await aggregate.save();
     }
@@ -551,7 +578,9 @@ async function recordExecutionEvent({
 function analyzeLedgerCoverageInMemory(aggregates = [], events = [], entityType = 'Task') {
   const expectedEvents = aggregates.reduce((sum, a) => sum + (typeof a.aggregateVersion === 'number' ? a.aggregateVersion : 0), 0);
   const recordedEvents = events.length;
-  const coveragePercent = expectedEvents === 0 ? 100 : Math.round((recordedEvents / Math.max(expectedEvents, 1)) * 100);
+  const coveragePercent = expectedEvents === 0
+    ? 100
+    : Math.min(100, Math.round((recordedEvents / Math.max(expectedEvents, 1)) * 100));
 
   const aggMap = new Map();
   for (const a of aggregates) {
@@ -708,26 +737,29 @@ function computeLedgerCoverage(params = {}, events = [], entityType = 'Task') {
     const {
       projectId,
       project,
-    tasks = [],
-    releases = [],
-    milestones = [],
-    decisions = [],
-    capacities = [],
-  } = opts;
+      projects = [],
+      tasks = [],
+      releases = [],
+      milestones = [],
+      decisions = [],
+      capacities = [],
+    } = opts;
 
   const countFilter = projectId ? { project: projectId } : {};
   let totalEvents = 0;
   let distinctAggregatesCount = 0;
-  try {
-    if (typeof ExecutionEvent.countDocuments === 'function') {
-      totalEvents = await ExecutionEvent.countDocuments(countFilter);
+  if (!opts.events) {
+    try {
+      if (typeof ExecutionEvent.countDocuments === 'function') {
+        totalEvents = await ExecutionEvent.countDocuments(countFilter);
+      }
+      if (typeof ExecutionEvent.distinct === 'function') {
+        const distinctAggs = await ExecutionEvent.distinct('subjectId', countFilter);
+        distinctAggregatesCount = Array.isArray(distinctAggs) ? distinctAggs.length : 0;
+      }
+    } catch (err) {
+      // Suppress in disconnected test mocks.
     }
-    if (typeof ExecutionEvent.distinct === 'function') {
-      const distinctAggs = await ExecutionEvent.distinct('subjectId', countFilter);
-      distinctAggregatesCount = Array.isArray(distinctAggs) ? distinctAggs.length : 0;
-    }
-  } catch (err) {
-    // Suppress in mock environments
   }
 
   const engine = supportsTransactions()
@@ -744,6 +776,7 @@ function computeLedgerCoverage(params = {}, events = [], entityType = 'Task') {
 
   const allAggregates = [
     ...(project ? [{ doc: project, type: 'project', title: project.name || 'Project' }] : []),
+    ...projects.map((p) => ({ doc: p, type: 'project', title: p.name || 'Project' })),
     ...tasks.map((t) => ({ doc: t, type: 'task', title: t.title || 'Task' })),
     ...releases.map((r) => ({ doc: r, type: 'release', title: r.name || r.version || 'Release' })),
     ...milestones.map((m) => ({ doc: m, type: 'milestone', title: m.title || 'Milestone' })),
@@ -797,20 +830,36 @@ function computeLedgerCoverage(params = {}, events = [], entityType = 'Task') {
     }
   }
 
+  if (opts.events) {
+    totalEvents = storedEvents.length;
+    distinctAggregatesCount = new Set(
+      storedEvents.map((event) => (event.subjectId || '').toString()).filter(Boolean)
+    ).size;
+  }
+  ledgerSummary.totalEvents = totalEvents;
+  ledgerSummary.distinctAggregatesTracked = distinctAggregatesCount;
+
   // Group events by subjectId string
   const eventsBySubject = new Map();
   const orphanEvents = [];
+  const tombstoneEvents = [];
+  const tombstoneTypes = new Set(['task.deleted', 'capacity.removed']);
 
   for (const ev of storedEvents) {
     const sId = (ev.subjectId || '').toString();
     if (!knownSubjectIdSet.has(sId)) {
-      orphanEvents.push({
+      const detachedEvent = {
         eventId: ev._id,
         subjectType: ev.subjectType,
         subjectId: sId,
         aggregateVersion: ev.aggregateVersion,
         eventType: ev.eventType,
-      });
+      };
+      if (tombstoneTypes.has(ev.eventType)) {
+        tombstoneEvents.push(detachedEvent);
+      } else {
+        orphanEvents.push(detachedEvent);
+      }
       continue;
     }
     if (!eventsBySubject.has(sId)) {
@@ -962,9 +1011,10 @@ function computeLedgerCoverage(params = {}, events = [], entityType = 'Task') {
       synchronizedCount: synchronizedAggregates.length,
       gapsCount: gaps.length,
       orphanEventsCount: orphanEvents.length,
+      tombstoneEventsCount: tombstoneEvents.length,
     },
     complexity: {
-      dbQueries: projectId ? 6 : 7,
+      dbQueries: 7,
       dbQueryRoundTrips: 'O(1) bounded batch queries',
       dataComplexity: 'O(N + M) memory where N is aggregate count and M is event count',
     },
@@ -972,6 +1022,7 @@ function computeLedgerCoverage(params = {}, events = [], entityType = 'Task') {
     synchronizedAggregates,
     gaps,
     orphanEvents,
+    tombstoneEvents,
     ledger: ledgerSummary,
   };
   })();

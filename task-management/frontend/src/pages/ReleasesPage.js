@@ -516,6 +516,10 @@ export default function ReleasesPage() {
                           <span className="readiness-score-number">{readiness.score}</span>
                           <span className="readiness-score-total">/100</span>
                         </>
+                      ) : forecasts[release._id].status === 'indeterminate' ? (
+                        <span style={{ color: '#a5b4fc', fontWeight: 600, fontSize: '11px' }}>
+                          Forecast unavailable
+                        </span>
                       ) : (
                         <span className="readiness-score-number" style={{ fontSize: '18px' }}>
                           —

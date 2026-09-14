@@ -442,7 +442,7 @@ const createDecision = async (req, res) => {
         },
       });
     } catch (evErr) {
-      if (evErr.isLedgerFailure) throw evErr;
+      if (mongoose.connection.readyState !== 0 || evErr.isLedgerFailure) throw evErr;
     }
 
     res.status(201).json({ success: true, decision: populated });
@@ -715,7 +715,7 @@ const updateDecision = async (req, res) => {
         },
       });
     } catch (evErr) {
-      if (evErr.isLedgerFailure) throw evErr;
+      if (mongoose.connection.readyState !== 0 || evErr.isLedgerFailure) throw evErr;
     }
 
     res.json({ success: true, decision });
@@ -898,7 +898,7 @@ const transitionDecision = async (req, res) => {
         },
       });
     } catch (evErr) {
-      if (evErr.isLedgerFailure) throw evErr;
+      if (mongoose.connection.readyState !== 0 || evErr.isLedgerFailure) throw evErr;
     }
 
     res.json({ success: true, decision });

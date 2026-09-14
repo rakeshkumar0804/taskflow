@@ -22,6 +22,12 @@ const ALLOWED_CHANGE_FIELDS = new Set([
   'project',
   'milestone',
   'release',
+  'verificationStatus',
+  'githubRepository',
+  'pullRequestNumber',
+  'pullRequestUrl',
+  'commitSha',
+  'ciStatus',
   'supersededBy',
   'availableDaysPerWeek',
   'wipLimit',
@@ -62,6 +68,8 @@ const EVENT_TYPE_TO_CATEGORY = {
   'task.estimate_changed': 'task',
   'task.milestone_linked': 'task',
   'task.milestone_unlinked': 'task',
+  'task.verification_linked': 'task',
+  'task.verification_updated': 'task',
   'task.deleted': 'task',
 
   'dependency.added': 'dependency',
@@ -116,6 +124,8 @@ const EVENT_TYPE_TO_SUBJECT_TYPE = {
   'task.estimate_changed': 'task',
   'task.milestone_linked': 'task',
   'task.milestone_unlinked': 'task',
+  'task.verification_linked': 'task',
+  'task.verification_updated': 'task',
   'task.deleted': 'task',
 
   'dependency.added': 'task',
@@ -258,6 +268,10 @@ function formatEventSummary({ eventType, subjectTitleSnapshot, changes = [], act
       return `${actor} changed priority of ${title}`;
     case 'task.deleted':
       return `${actor} deleted task ${title}`;
+    case 'task.verification_linked':
+      return `${actor} linked GitHub evidence to ${title}`;
+    case 'task.verification_updated':
+      return `${actor} updated GitHub verification for ${title}`;
     case 'project.created':
       return `${actor} created project ${title}`;
     case 'project.updated':
@@ -266,8 +280,6 @@ function formatEventSummary({ eventType, subjectTitleSnapshot, changes = [], act
       return `${actor} added a member to project ${title}`;
     case 'project.member_removed':
       return `${actor} removed a member from project ${title}`;
-    case 'project.deleted':
-      return `${actor} deleted project ${title}`;
     case 'release.created':
       return `${actor} created release ${title}`;
     case 'release.updated':

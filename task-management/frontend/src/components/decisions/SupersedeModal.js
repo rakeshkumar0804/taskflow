@@ -110,7 +110,7 @@ export default function SupersedeModal({
               >
                 {candidates.map((c) => (
                   <option key={c._id} value={c._id}>
-                    {c.title} ({new Date(c.updatedAt).toLocaleDateString()})
+                    {c.title} ({c.updatedAt && !Number.isNaN(new Date(c.updatedAt).getTime()) ? new Date(c.updatedAt).toLocaleDateString() : 'Date unavailable'})
                   </option>
                 ))}
               </select>

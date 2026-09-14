@@ -1,5 +1,10 @@
 const mongoose = require('mongoose');
-const { ExecutionEvent } = require('../models/ExecutionEvent');
+const {
+  ExecutionEvent,
+  CANONICAL_EVENT_TYPES,
+  CANONICAL_CATEGORIES,
+  CANONICAL_SUBJECT_TYPES,
+} = require('../models/ExecutionEvent');
 const Project = require('../models/Project');
 const Task = require('../models/Task');
 const Release = require('../models/Release');
@@ -42,7 +47,7 @@ function decodeCursor(cursorStr) {
     const raw = Buffer.from(cursorStr, 'base64url').toString('utf8');
     const parsed = JSON.parse(raw);
     const targetId = parsed._id || parsed.id;
-    if (!parsed.occurredAt || !targetId) {
+    if (!parsed.occurredAt || !targetId || !mongoose.Types.ObjectId.isValid(targetId)) {
       return null;
     }
     const d = new Date(parsed.occurredAt);
@@ -124,9 +129,8 @@ function canUserViewEvent(user, event, memberContext = null) {
   if (event.category === 'dependency') {
     const depTaskId = event.task ? (event.task._id || event.task).toString() : event.subjectId?.toString();
     const prereqTaskId = event.metadata?.prerequisiteTaskId ? event.metadata.prerequisiteTaskId.toString() : null;
-    if (!depTaskId || !accessibleTaskIds.has(depTaskId)) return false;
-    if (prereqTaskId && !accessibleTaskIds.has(prereqTaskId)) return false;
-    return true;
+    if (!depTaskId || !prereqTaskId) return false;
+    return accessibleTaskIds.has(depTaskId) && accessibleTaskIds.has(prereqTaskId);
   }
 
   // Project, Release, Milestone, Decision events are visible if project is readable
@@ -182,6 +186,15 @@ const getActivityFeed = async (req, res) => {
       fieldFilter.project = project;
     }
 
+    if (category && !CANONICAL_CATEGORIES.includes(category)) {
+      return res.status(400).json({ success: false, message: 'Invalid activity category' });
+    }
+    if (eventType && !CANONICAL_EVENT_TYPES.includes(eventType)) {
+      return res.status(400).json({ success: false, message: 'Invalid activity event type' });
+    }
+    if (subjectType && !CANONICAL_SUBJECT_TYPES.includes(subjectType)) {
+      return res.status(400).json({ success: false, message: 'Invalid activity subject type' });
+    }
     if (category) fieldFilter.category = category;
     if (eventType) fieldFilter.eventType = eventType;
     if (subjectType) fieldFilter.subjectType = subjectType;
@@ -205,11 +218,17 @@ const getActivityFeed = async (req, res) => {
       const dateFilter = {};
       if (dateFrom) {
         const dF = new Date(dateFrom);
-        if (!isNaN(dF.getTime())) dateFilter.$gte = dF;
+        if (isNaN(dF.getTime())) {
+          return res.status(400).json({ success: false, message: 'Invalid dateFrom parameter' });
+        }
+        dateFilter.$gte = dF;
       }
       if (dateTo) {
         const dT = new Date(dateTo);
-        if (!isNaN(dT.getTime())) dateFilter.$lte = dT;
+        if (isNaN(dT.getTime())) {
+          return res.status(400).json({ success: false, message: 'Invalid dateTo parameter' });
+        }
+        dateFilter.$lte = dT;
       }
       if (Object.keys(dateFilter).length > 0) {
         fieldFilter.occurredAt = dateFilter;
@@ -412,6 +431,7 @@ const getLedgerCoverage = async (req, res) => {
         const events = await ExecutionEvent.find({}).select('_id subjectId subjectType aggregateVersion').lean();
 
         globalCoverage = await computeLedgerCoverage({
+          projects: projects || [],
           tasks: tasks || [],
           releases: releases || [],
           milestones: milestones || [],
@@ -459,12 +479,13 @@ const getLedgerCoverage = async (req, res) => {
     }
 
     // Bounded batch queries across all project entities with +aggregateVersion selected
-    const [tasks, releases, milestones, decisions, capacities] = await Promise.all([
+    const [tasks, releases, milestones, decisions, capacities, events] = await Promise.all([
       Task.find({ project: projectId }).select('_id title createdAt +aggregateVersion'),
       Release.find({ project: projectId }).select('_id name version createdAt +aggregateVersion'),
       Milestone.find({ project: projectId }).select('_id title createdAt +aggregateVersion'),
       DecisionRecord.find({ project: projectId }).select('_id title createdAt +aggregateVersion'),
       ProjectCapacity.find({ project: projectId }).select('_id user createdAt +aggregateVersion'),
+      ExecutionEvent.find({ project: projectId }).select('_id subjectId subjectType aggregateVersion eventType').lean(),
     ]);
 
     const coverage = await computeLedgerCoverage({
@@ -475,6 +496,7 @@ const getLedgerCoverage = async (req, res) => {
       milestones,
       decisions,
       capacities,
+      events: events || [],
     });
 
     // If non-admin project-owning manager, return scoped status without sensitive internal diagnostics

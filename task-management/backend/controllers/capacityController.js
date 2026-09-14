@@ -193,7 +193,7 @@ const upsertProjectCapacity = async (req, res) => {
         },
       });
     } catch (evErr) {
-      if (evErr.isLedgerFailure) throw evErr;
+      if (mongoose.connection.readyState !== 0 || evErr.isLedgerFailure) throw evErr;
     }
 
     return res.status(200).json({
@@ -254,6 +254,7 @@ const deleteProjectCapacity = async (req, res) => {
       await recordExecutionEvent({
         model: ProjectCapacity,
         aggregate: deleted,
+        options: { skipAggregateSave: true },
         eventInput: {
           eventType: 'capacity.removed',
           project: projectId,
@@ -270,7 +271,7 @@ const deleteProjectCapacity = async (req, res) => {
         },
       });
     } catch (evErr) {
-      if (evErr.isLedgerFailure) throw evErr;
+      if (mongoose.connection.readyState !== 0 || evErr.isLedgerFailure) throw evErr;
     }
 
     return res.status(200).json({

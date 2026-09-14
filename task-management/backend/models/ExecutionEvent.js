@@ -7,6 +7,7 @@ const CANONICAL_EVENT_TYPES = [
   'project.status_changed',
   'project.member_added',
   'project.member_removed',
+  // Reserved for controlled retention/migration tooling; no public hard-delete route.
   'project.deleted',
 
   // Task
@@ -19,6 +20,8 @@ const CANONICAL_EVENT_TYPES = [
   'task.estimate_changed',
   'task.milestone_linked',
   'task.milestone_unlinked',
+  'task.verification_linked',
+  'task.verification_updated',
   'task.deleted',
 
   // Dependency
@@ -37,6 +40,7 @@ const CANONICAL_EVENT_TYPES = [
   'release.updated',
   'release.status_changed',
   'release.cancelled',
+  // Reserved for controlled retention/migration tooling; public DELETE cancels.
   'release.deleted',
 
   // Milestone
@@ -223,7 +227,9 @@ executionEventSchema.index({ task: 1, occurredAt: -1 });
 executionEventSchema.index({ release: 1, occurredAt: -1 });
 executionEventSchema.index({ milestone: 1, occurredAt: -1 });
 executionEventSchema.index({ decision: 1, occurredAt: -1 });
-executionEventSchema.index({ correlationId: 1 }, { unique: true });
+// A correlation may legitimately span more than one aggregate event. Event
+// sequence uniqueness is enforced by the aggregate version compound index.
+executionEventSchema.index({ correlationId: 1 });
 
 // Application-level immutability enforcement hooks
 executionEventSchema.pre('save', function (next) {

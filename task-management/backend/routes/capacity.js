@@ -7,6 +7,7 @@ const {
   getProjectCapacityIntelligence,
 } = require('../controllers/capacityController');
 const { protect } = require('../middleware/auth');
+const { withLedgerTransaction } = require('../middleware/ledgerTransaction');
 
 router.use(protect);
 
@@ -17,7 +18,7 @@ router.get('/:projectId/capacity/intelligence', (req, res, next) => {
   return getProjectCapacityIntelligence(req, res, next);
 });
 router.get('/:projectId/capacity', getProjectCapacities);
-router.put('/:projectId/capacity/:userId', upsertProjectCapacity);
-router.delete('/:projectId/capacity/:userId', deleteProjectCapacity);
+router.put('/:projectId/capacity/:userId', withLedgerTransaction(upsertProjectCapacity));
+router.delete('/:projectId/capacity/:userId', withLedgerTransaction(deleteProjectCapacity));
 
 module.exports = router;

@@ -13,6 +13,12 @@ const cors = require("cors");
 
 const connectDB = require("./config/db");
 
+// Bind all Mongoose operations executed inside connection.transaction() to
+// the active session, including operations in nested controller services.
+// This is required for the execution ledger's replica-set atomicity contract.
+const mongoose = require("mongoose");
+mongoose.set("transactionAsyncLocalStorage", true);
+
 // Connect Database
 connectDB();
 
@@ -47,7 +53,7 @@ app.use(
   }),
 );
 
-app.use(express.json());
+app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = Buffer.from(buf); } }));
 app.use(express.urlencoded({ extended: false }));
 
 // Attach io to requests
@@ -65,6 +71,7 @@ app.use("/api/releases", require("./routes/releases"));
 app.use("/api/milestones", require("./routes/milestones"));
 app.use("/api/decisions", require("./routes/decisions"));
 app.use("/api/activity", require("./routes/activity"));
+app.use("/api/webhooks", require("./routes/webhooks"));
 app.use("/api/users", require("./routes/users"));
 
 // Health Check

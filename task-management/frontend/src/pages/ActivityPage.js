@@ -120,7 +120,7 @@ export default function ActivityPage() {
         <div className="activity-title-row">
           <h1 className="activity-title">
             Activity Timeline & Execution Ledger
-            <span className="activity-ledger-tag">v7 Canonical Ledger</span>
+            <span className="activity-ledger-tag">Execution History</span>
           </h1>
         </div>
         <p className="activity-subtitle">

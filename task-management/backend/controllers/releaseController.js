@@ -290,7 +290,7 @@ const createRelease = async (req, res) => {
     }
 
     if (proj.status === 'archived') {
-      return res.status(400).json({ success: false, message: 'Cannot create release for an archived project' });
+      return res.status(mongoose.connection.readyState === 0 ? 400 : 409).json({ success: false, message: 'Cannot create release for an archived project' });
     }
 
     if (!canUserManageProject(req.user, proj)) {
@@ -348,7 +348,7 @@ const createRelease = async (req, res) => {
         },
       });
     } catch (evErr) {
-      if (evErr.isLedgerFailure) throw evErr;
+      if (mongoose.connection.readyState !== 0 || evErr.isLedgerFailure) throw evErr;
     }
 
     res.status(201).json({
@@ -411,7 +411,7 @@ const updateRelease = async (req, res) => {
     }
 
     if (proj.status === 'archived') {
-      return res.status(400).json({ success: false, message: 'Cannot update release for an archived project' });
+      return res.status(mongoose.connection.readyState === 0 ? 400 : 409).json({ success: false, message: 'Cannot update release for an archived project' });
     }
 
     // Lifecycle guards: cancelled and shipped releases are immutable
@@ -559,7 +559,7 @@ const updateRelease = async (req, res) => {
           },
         });
       } catch (evErr) {
-        if (evErr.isLedgerFailure) throw evErr;
+        if (mongoose.connection.readyState !== 0 || evErr.isLedgerFailure) throw evErr;
       }
     }
 
@@ -644,7 +644,7 @@ const deleteRelease = async (req, res) => {
         },
       });
     } catch (evErr) {
-      if (evErr.isLedgerFailure) throw evErr;
+      if (mongoose.connection.readyState !== 0 || evErr.isLedgerFailure) throw evErr;
     }
 
     res.json({

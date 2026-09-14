@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
+const { withLedgerTransaction } = require('../middleware/ledgerTransaction');
 const {
   getDecisions,
   getDecision,
@@ -15,13 +16,13 @@ router.use(protect);
 
 router.route('/')
   .get(getDecisions)
-  .post(createDecision);
+  .post(withLedgerTransaction(createDecision));
 
 router.route('/:id')
   .get(getDecision)
-  .put(updateDecision);
+  .put(withLedgerTransaction(updateDecision));
 
-router.post('/:id/transition', transitionDecision);
+router.post('/:id/transition', withLedgerTransaction(transitionDecision));
 router.get('/:id/impact', getDecisionImpact);
 
 module.exports = router;

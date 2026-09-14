@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useTasks } from "../hooks/useTasks";
 import toast from "react-hot-toast";
 import TaskDrawer from "../components/tasks/TaskDrawer";
+import GitHubEvidenceBadge from "../components/tasks/GitHubEvidenceBadge";
 import FlowHealthWidget from "../components/tasks/FlowHealthWidget";
 import DecisionDrawer from "../components/decisions/DecisionDrawer";
 import DecisionModal from "../components/decisions/DecisionModal";
@@ -1330,6 +1331,7 @@ export default function ProjectDetailPage() {
                               )}
 
                               <h3 className="task-card-title">{task.title}</h3>
+                              <GitHubEvidenceBadge task={task} />
 
                               {task.description && (
                                 <p className="task-card-snippet">{task.description}</p>
@@ -1416,6 +1418,7 @@ export default function ProjectDetailPage() {
                       <span className={`badge badge-${task.priority}`}>{task.priority}</span>
                       <span className={`badge badge-${task.status}`}>{task.status}</span>
                       <span className="tlr-title">{task.title}</span>
+                      <GitHubEvidenceBadge task={task} />
                     </div>
 
                     <div className="tlr-right">

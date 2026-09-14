@@ -6,6 +6,12 @@ import DecisionDrawer from '../components/decisions/DecisionDrawer';
 import toast from 'react-hot-toast';
 import './DecisionsPage.css';
 
+function formatDecisionDate(value) {
+  if (!value) return 'Date unavailable';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'Date unavailable' : date.toLocaleDateString();
+}
+
 export default function DecisionsPage() {
   const { user, isAdmin, isManager } = useAuth();
   const isMember = !isAdmin && !isManager;
@@ -394,7 +400,7 @@ export default function DecisionsPage() {
                         {dec.decidedBy ? dec.decidedBy.name : (dec.proposedBy?.name || 'Member')}
                       </div>
                       <div className="meta-date">
-                        {new Date(dec.decidedAt || dec.updatedAt).toLocaleDateString()}
+                        {formatDecisionDate(dec.decidedAt || dec.updatedAt)}
                       </div>
                     </td>
 
@@ -470,7 +476,7 @@ export default function DecisionsPage() {
                     <div className="mobile-card-author">
                       <span>{dec.decidedBy ? dec.decidedBy.name : (dec.proposedBy?.name || 'Member')}</span>
                       <span className="mobile-card-date">
-                        {new Date(dec.decidedAt || dec.updatedAt).toLocaleDateString()}
+                        {formatDecisionDate(dec.decidedAt || dec.updatedAt)}
                       </span>
                     </div>
                     <button

@@ -12,6 +12,19 @@ const commentSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+const githubEvidenceSchema = new mongoose.Schema(
+  {
+    repository: { type: String, trim: true, maxlength: 200 },
+    pullRequestNumber: { type: Number, min: 1 },
+    pullRequestUrl: { type: String, trim: true, maxlength: 500 },
+    commitSha: { type: String, trim: true, maxlength: 100 },
+    state: { type: String, enum: ['open', 'closed', 'merged'], default: 'open' },
+    ciStatus: { type: String, enum: ['unknown', 'pending', 'success', 'failure'], default: 'unknown' },
+    lastSyncedAt: { type: Date, default: null },
+  },
+  { _id: false }
+);
+
 const taskSchema = new mongoose.Schema(
   {
     title: {
@@ -100,6 +113,12 @@ const taskSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    verificationStatus: {
+      type: String,
+      enum: ['unlinked', 'in_review', 'changes_requested', 'ci_failed', 'ready', 'verified'],
+      default: 'unlinked',
+    },
+    githubEvidence: { type: githubEvidenceSchema, default: null },
     aggregateVersion: {
       type: Number,
       default: 0,

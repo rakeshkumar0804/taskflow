@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 const Task = require('../models/Task');
 const Project = require('../models/Project');
 const User = require('../models/User');
@@ -339,7 +340,7 @@ const createTask = async (req, res) => {
         },
       });
     } catch (evErr) {
-      if (evErr.isLedgerFailure) throw evErr;
+      if (mongoose.connection.readyState !== 0 || evErr.isLedgerFailure) throw evErr;
     }
 
     res.status(201).json({ success: true, task: populated });
@@ -653,7 +654,7 @@ const updateTask = async (req, res) => {
           },
         });
       } catch (evErr) {
-        if (evErr.isLedgerFailure) throw evErr;
+        if (mongoose.connection.readyState !== 0 || evErr.isLedgerFailure) throw evErr;
       }
     }
 
@@ -719,7 +720,7 @@ const deleteTask = async (req, res) => {
         },
       });
     } catch (evErr) {
-      if (evErr.isLedgerFailure) throw evErr;
+      if (mongoose.connection.readyState !== 0 || evErr.isLedgerFailure) throw evErr;
     }
 
     await task.deleteOne();
@@ -1138,7 +1139,7 @@ const addTaskDependency = async (req, res) => {
       });
       dependentTask.aggregateVersion = aggregateTask.aggregateVersion;
     } catch (evErr) {
-      if (evErr.isLedgerFailure) throw evErr;
+      if (mongoose.connection.readyState !== 0 || evErr.isLedgerFailure) throw evErr;
     }
 
     res.status(201).json({
@@ -1189,6 +1190,13 @@ const removeTaskDependency = async (req, res) => {
       $pull: { dependsOn: dependencyTaskId },
     });
 
+    // Use the post-mutation document for version advancement. Saving the stale
+    // pre-$pull document here would restore the dependency that was removed.
+    let updatedTask = await Task.findById(dependentTask._id);
+    if (updatedTask && typeof updatedTask.populate === 'function') {
+      updatedTask = await updatedTask.populate('dependsOn', 'title status priority');
+    }
+
     req.io?.emit('task:dependencyRemoved', {
       taskId: dependentTask._id,
       dependencyTaskId,
@@ -1197,19 +1205,19 @@ const removeTaskDependency = async (req, res) => {
     try {
       await recordExecutionEvent({
         model: Task,
-        aggregate: dependentTask,
+        aggregate: updatedTask,
         eventInput: {
           eventType: 'dependency.removed',
-          project: dependentTask.project,
+          project: updatedTask.project,
           actor: req.user._id,
           actorSnapshot: { name: req.user.name, role: req.user.role },
           subjectType: 'task',
-          subjectId: dependentTask._id,
-          subjectTitleSnapshot: dependentTask.title,
-          task: dependentTask._id,
+          subjectId: updatedTask._id,
+          subjectTitleSnapshot: updatedTask.title,
+          task: updatedTask._id,
           metadata: {
             prerequisiteTaskId: dependencyTaskId.toString(),
-            dependentTaskId: dependentTask._id.toString(),
+            dependentTaskId: updatedTask._id.toString(),
           },
           changes: [
             { field: 'prerequisiteTaskId', from: dependencyTaskId.toString(), to: null },
@@ -1217,13 +1225,155 @@ const removeTaskDependency = async (req, res) => {
         },
       });
     } catch (evErr) {
-      if (evErr.isLedgerFailure) throw evErr;
+      if (mongoose.connection.readyState !== 0 || evErr.isLedgerFailure) throw evErr;
     }
 
-    res.json({ success: true, message: 'Dependency removed successfully' });
+    res.json({ success: true, message: 'Dependency removed successfully', task: updatedTask });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
+};
+
+const githubLinkPayload = (task) => task.githubEvidence ? {
+  repository: task.githubEvidence.repository,
+  pullRequestNumber: task.githubEvidence.pullRequestNumber,
+  pullRequestUrl: task.githubEvidence.pullRequestUrl,
+  commitSha: task.githubEvidence.commitSha,
+  state: task.githubEvidence.state,
+  ciStatus: task.githubEvidence.ciStatus,
+  lastSyncedAt: task.githubEvidence.lastSyncedAt,
+} : null;
+
+// @route PUT /api/tasks/:id/github
+const linkGitHubEvidence = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid task ID format' });
+    }
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+    if (!canAccessTask(req.user, task)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to link GitHub evidence to this task' });
+    }
+
+    const { repository, pullRequestNumber, pullRequestUrl, commitSha } = req.body || {};
+    if (typeof repository !== 'string' || !/^[^/\s]+\/[^/\s]+$/.test(repository.trim())) {
+      return res.status(400).json({ success: false, message: 'repository must use the owner/name format' });
+    }
+    const prNumber = Number(pullRequestNumber);
+    if (!Number.isInteger(prNumber) || prNumber < 1) {
+      return res.status(400).json({ success: false, message: 'pullRequestNumber must be a positive integer' });
+    }
+    let normalizedUrl = `https://github.com/${repository.trim()}/pull/${prNumber}`;
+    if (pullRequestUrl !== undefined) {
+      try {
+        const parsed = new URL(String(pullRequestUrl));
+        if (parsed.protocol !== 'https:' || parsed.hostname !== 'github.com') throw new Error('invalid');
+        normalizedUrl = parsed.toString();
+      } catch (_) {
+        return res.status(400).json({ success: false, message: 'pullRequestUrl must be a valid GitHub HTTPS URL' });
+      }
+    }
+    if (commitSha !== undefined && (typeof commitSha !== 'string' || !/^[a-f0-9]{7,100}$/i.test(commitSha.trim()))) {
+      return res.status(400).json({ success: false, message: 'commitSha must be a valid hexadecimal commit hash' });
+    }
+
+    const wasLinked = Boolean(task.githubEvidence);
+    const oldEvidence = githubLinkPayload(task);
+    task.githubEvidence = {
+      repository: repository.trim(),
+      pullRequestNumber: prNumber,
+      pullRequestUrl: normalizedUrl,
+      commitSha: commitSha ? commitSha.trim() : '',
+      state: 'open',
+      ciStatus: 'unknown',
+      lastSyncedAt: new Date(),
+    };
+    task.verificationStatus = 'in_review';
+    await task.save();
+
+    try {
+      await recordExecutionEvent({
+        model: Task,
+        aggregate: task,
+        eventInput: {
+          eventType: wasLinked ? 'task.verification_updated' : 'task.verification_linked',
+          project: task.project,
+          actor: req.user._id,
+          actorSnapshot: { name: req.user.name, role: req.user.role },
+          subjectType: 'task', subjectId: task._id, subjectTitleSnapshot: task.title, task: task._id,
+          changes: [
+            { field: 'verificationStatus', from: wasLinked ? 'in_review' : 'unlinked', to: task.verificationStatus },
+            { field: 'githubRepository', from: oldEvidence?.repository || null, to: task.githubEvidence.repository },
+            { field: 'pullRequestNumber', from: oldEvidence?.pullRequestNumber || null, to: prNumber },
+          ],
+          metadata: { repository: task.githubEvidence.repository, pullRequestNumber: prNumber },
+        },
+      });
+    } catch (eventError) {
+      if (mongoose.connection.readyState !== 0 || eventError.isLedgerFailure) throw eventError;
+    }
+    return res.json({ success: true, task });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message });
+  }
+};
+
+function verifyGitHubSignature(req) {
+  const secret = process.env.GITHUB_WEBHOOK_SECRET;
+  const signature = req.get('x-hub-signature-256');
+  if (!secret || !signature || !req.rawBody) return false;
+  const expected = `sha256=${crypto.createHmac('sha256', secret).update(req.rawBody).digest('hex')}`;
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+// @route POST /api/webhooks/github
+const githubWebhook = async (req, res) => {
+  if (!verifyGitHubSignature(req)) {
+    return res.status(401).json({ success: false, message: 'Invalid GitHub webhook signature' });
+  }
+  const eventName = req.get('x-github-event');
+  const payload = req.body || {};
+  const repository = payload.repository?.full_name;
+  const prNumber = payload.pull_request?.number || payload.check_suite?.pull_requests?.[0]?.number;
+  if (!repository || !Number.isInteger(prNumber)) {
+    return res.status(202).json({ success: true, ignored: true });
+  }
+
+  const action = payload.action;
+  const merged = eventName === 'pull_request' && action === 'closed' && payload.pull_request?.merged === true;
+  const prState = eventName === 'pull_request' && action === 'closed' ? (merged ? 'merged' : 'closed') : 'open';
+  let ciStatus = null;
+  if (eventName === 'check_suite' && payload.action === 'completed') {
+    ciStatus = payload.check_suite?.conclusion === 'success' ? 'success' : 'failure';
+  }
+  const filter = { 'githubEvidence.repository': repository, 'githubEvidence.pullRequestNumber': prNumber };
+  const tasks = await Task.find(filter);
+  for (const task of tasks || []) {
+    const oldStatus = task.verificationStatus;
+    if (ciStatus) task.githubEvidence.ciStatus = ciStatus;
+    if (eventName === 'pull_request') task.githubEvidence.state = prState;
+    task.githubEvidence.lastSyncedAt = new Date();
+    task.verificationStatus = merged ? 'verified' : (ciStatus === 'failure' ? 'ci_failed' : (ciStatus === 'success' ? 'ready' : oldStatus));
+    await task.save();
+    try {
+      await recordExecutionEvent({
+        model: Task, aggregate: task,
+        eventInput: {
+          eventType: 'task.verification_updated', project: task.project, actor: 'github-webhook',
+          actorSnapshot: { name: 'GitHub Webhook', role: 'system' }, subjectType: 'task', subjectId: task._id,
+          subjectTitleSnapshot: task.title, task: task._id,
+          changes: [{ field: 'verificationStatus', from: oldStatus, to: task.verificationStatus }, { field: 'ciStatus', from: null, to: task.githubEvidence.ciStatus }],
+          metadata: { repository, pullRequestNumber: prNumber, event: eventName, action },
+        },
+      });
+    } catch (eventError) {
+      if (mongoose.connection.readyState !== 0 || eventError.isLedgerFailure) throw eventError;
+    }
+  }
+  return res.status(200).json({ success: true, updatedTasks: tasks?.length || 0 });
 };
 
 module.exports = {
@@ -1238,6 +1388,8 @@ module.exports = {
   getTaskDependencies,
   addTaskDependency,
   removeTaskDependency,
+  linkGitHubEvidence,
+  githubWebhook,
   canAccessTask,
   escapeRegex,
   ALLOWED_STATUSES,

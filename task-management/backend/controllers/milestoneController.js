@@ -186,7 +186,7 @@ const createMilestone = async (req, res) => {
     }
 
     if (proj.status === 'archived') {
-      return res.status(400).json({ success: false, message: 'Cannot create milestone for an archived project' });
+      return res.status(mongoose.connection.readyState === 0 ? 400 : 409).json({ success: false, message: 'Cannot create milestone for an archived project' });
     }
 
     if (!canUserManageProject(req.user, proj)) {
@@ -276,7 +276,7 @@ const createMilestone = async (req, res) => {
         },
       });
     } catch (evErr) {
-      if (evErr.isLedgerFailure) throw evErr;
+      if (mongoose.connection.readyState !== 0 || evErr.isLedgerFailure) throw evErr;
     }
 
     res.status(201).json({ success: true, milestone });
@@ -312,7 +312,7 @@ const updateMilestone = async (req, res) => {
     }
 
     if (proj.status === 'archived') {
-      return res.status(400).json({ success: false, message: 'Cannot update milestone for an archived project' });
+      return res.status(mongoose.connection.readyState === 0 ? 400 : 409).json({ success: false, message: 'Cannot update milestone for an archived project' });
     }
 
     // Lifecycle guard: cancelled and completed milestones are terminal
@@ -491,7 +491,7 @@ const updateMilestone = async (req, res) => {
           },
         });
       } catch (evErr) {
-        if (evErr.isLedgerFailure) throw evErr;
+        if (mongoose.connection.readyState !== 0 || evErr.isLedgerFailure) throw evErr;
       }
     }
 
@@ -579,7 +579,7 @@ const deleteMilestone = async (req, res) => {
         },
       });
     } catch (evErr) {
-      if (evErr.isLedgerFailure) throw evErr;
+      if (mongoose.connection.readyState !== 0 || evErr.isLedgerFailure) throw evErr;
     }
 
     res.json({
