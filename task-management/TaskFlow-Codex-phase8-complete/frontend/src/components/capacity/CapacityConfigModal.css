@@ -1,0 +1,126 @@
+.capacity-modal {
+  max-width: 520px;
+  width: 100%;
+}
+
+.capacity-modal-subtitle {
+  font-size: 13px;
+  color: var(--text-2, #a0a0aa);
+  margin-top: 4px;
+}
+
+.capacity-modal-alert {
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  color: #facc15;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.capacity-modal-error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.capacity-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.form-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.field-hint {
+  font-size: 11px;
+  color: var(--text-3, #606068);
+}
+
+.capacity-slider {
+  width: 100%;
+  accent-color: var(--accent, #6366f1);
+  cursor: pointer;
+  height: 6px;
+}
+
+.slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-3, #606068);
+  margin-top: 4px;
+}
+
+.capacity-preview-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.capacity-preview-card h4 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-3, #606068);
+  margin-bottom: 10px;
+}
+
+.capacity-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.preview-stat {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.preview-label {
+  font-size: 11px;
+  color: var(--text-3, #606068);
+}
+
+.preview-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent, #818cf8);
+}
+
+.preview-disclaimer {
+  font-size: 11px;
+  color: var(--text-3, #606068);
+  margin-top: 10px;
+  line-height: 1.4;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.modal-actions-right {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
