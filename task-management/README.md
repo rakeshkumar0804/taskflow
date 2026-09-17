@@ -17,6 +17,40 @@ The active implementation is in `backend/` and `frontend/`. It includes dependen
 - **Team Management** — Admins can view all users, change roles, deactivate accounts
 - **Dashboard** — Live stats: total, in-progress, Done, overdue tasks
 
+## Product Screenshots
+
+### Command Center Dashboard
+
+![TaskFlow command center dashboard](screenshots/dashboard.png)
+
+### Tasks Board
+
+![TaskFlow task execution board](screenshots/tasks-board.png)
+
+### Project Control Room
+
+![TaskFlow project control room](screenshots/projects-control-room.png)
+
+### Releases & Milestones
+
+![TaskFlow releases and milestones workspace](screenshots/releases-milestones.png)
+
+### Execution Graph
+
+![TaskFlow dependency execution graph](screenshots/execution-graph.png)
+
+### Engineering Decisions
+
+![TaskFlow engineering decisions workspace](screenshots/engineering-decisions.png)
+
+### Team Capacity & Ownership
+
+![TaskFlow team capacity and ownership workspace](screenshots/team-capacity.png)
+
+### Activity Timeline & Execution Ledger
+
+![TaskFlow activity timeline and execution ledger](screenshots/activity-ledger.png)
+
 ## Tech Stack
 
 - **Frontend**: React 18, React Router v6, Socket.IO Client, Axios, react-hot-toast, date-fns
