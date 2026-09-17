@@ -1,4 +1,4 @@
-# TaskFlow
+# TaskFlo
 
 TaskFlow is a full-stack project management platform built with the MERN stack. It gives engineering teams a unified workspace to plan tasks, track releases, manage milestones, record architectural decisions, and monitor delivery health — all wrapped in a polished dark-themed UI.
 
