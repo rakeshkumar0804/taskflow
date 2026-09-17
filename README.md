@@ -69,16 +69,39 @@ TaskFlow is a full-stack project management platform built with the MERN stack. 
 
 ---
 
-## Screenshots
+## Product Screenshots
 
-### Login Page
-<img width="1911" height="962" alt="login" src="https://github.com/user-attachments/assets/0d0c1dbb-257c-4926-97f8-09a575567473" />
+### Command Center Dashboard
 
-### Dashboard
-<img width="1902" height="962" alt="dashboard" src="https://github.com/user-attachments/assets/0df14ad4-e767-43fe-9bfa-8273e9e33a74" />
+![TaskFlow command center dashboard](screenshots/dashboard.png)
 
-### Projects
-<img width="1902" height="946" alt="projects" src="https://github.com/user-attachments/assets/ba39b08b-e2e4-498c-953b-2a111beedbe7" />
+### Tasks Board
+
+![TaskFlow task execution board](screenshots/tasks-board.png)
+
+### Project Control Room
+
+![TaskFlow project control room](screenshots/projects-control-room.png)
+
+### Releases & Milestones
+
+![TaskFlow releases and milestones workspace](screenshots/releases-milestones.png)
+
+### Execution Graph
+
+![TaskFlow dependency execution graph](screenshots/execution-graph.png)
+
+### Engineering Decisions
+
+![TaskFlow engineering decisions workspace](screenshots/engineering-decisions.png)
+
+### Team Capacity & Ownership
+
+![TaskFlow team capacity and ownership workspace](screenshots/team-capacity.png)
+
+### Activity Timeline & Execution Ledger
+
+![TaskFlow activity timeline and execution ledger](screenshots/activity-ledger.png)
 
 ---
 
